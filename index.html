@@ -2,72 +2,121 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Поиск цены товара</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поиск товара</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    input, select { padding: 10px; font-size: 16px; margin-top: 10px; width: 100%; }
-    .suggestions { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; }
-    .suggestion-item { padding: 10px; cursor: pointer; }
-    .suggestion-item:hover { background: #f0f0f0; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: #f9f9f9;
+    }
+    h2 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    .suggestions {
+      margin-top: 10px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .suggestion-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      font-size: 16px;
+    }
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    .suggestion-item:hover {
+      background-color: #f0f0f0;
+      cursor: pointer;
+    }
+    #price-output {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+      color: #333;
+    }
   </style>
 </head>
 <body>
 
-<h2>Загрузка файла Excel</h2>
-<input type="file" id="file-input" accept=".xlsx,.xls">
-
-<h2>Поиск товара</h2>
-<input type="text" id="search-input" placeholder="Введите наименование товара..." disabled>
+<h2>Поиск цены товара</h2>
+<input type="text" id="search-input" placeholder="Введите название товара..." autocomplete="off">
 <div id="suggestions" class="suggestions"></div>
-
-<h3 id="price-output"></h3>
+<div id="price-output"></div>
 
 <script>
   let products = [];
 
-  document.getElementById('file-input').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
+  // Загружаем файл Товары.xlsx из корня сайта
+  async function loadExcelFile() {
+    const response = await fetch('/Товары.xlsx');
+    const arrayBuffer = await response.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-      // Сохраняем только необходимые столбцы
-      products = jsonData.map(row => ({
-        name: row['Наименование'],
-        price: row['Цена розница']
-      })).filter(p => p.name && p.price); // убираем пустые
+    // Сохраняем нужные данные
+    products = jsonData.map(row => ({
+      name: row['Наименование'],
+      price: row['Цена розница']
+    })).filter(p => p.name && p.price);
+  }
 
-      document.getElementById('search-input').disabled = false;
-      alert('Файл загружен, можно искать!');
-    };
-    reader.readAsArrayBuffer(file);
-  });
+  // Отображение подсказок
+  function showSuggestions(value) {
+    const suggestionsBox = document.getElementById('suggestions');
+    const output = document.getElementById('price-output');
+    suggestionsBox.innerHTML = '';
+    output.textContent = '';
 
-  document.getElementById('search-input').addEventListener('input', function() {
-    const input = this.value.toLowerCase();
-    const suggestions = products.filter(p => p.name.toLowerCase().includes(input)).slice(0, 10);
+    const searchValue = value.trim().toLowerCase();
+    if (!searchValue) return;
 
-    const suggestionBox = document.getElementById('suggestions');
-    suggestionBox.innerHTML = '';
+    const suggestions = products.filter(p =>
+      p.name.toLowerCase().includes(searchValue)
+    ).slice(0, 10);
 
-    suggestions.forEach(s => {
+    for (const s of suggestions) {
       const item = document.createElement('div');
       item.className = 'suggestion-item';
       item.textContent = `${s.name} — ${s.price}₸`;
-      item.addEventListener('click', () => {
+      item.onclick = () => {
         document.getElementById('search-input').value = s.name;
-        document.getElementById('price-output').textContent = `Цена: ${s.price}₸`;
-        suggestionBox.innerHTML = '';
-      });
-      suggestionBox.appendChild(item);
-    });
+        output.textContent = `Цена: ${s.price}₸`;
+        suggestionsBox.innerHTML = '';
+      };
+      suggestionsBox.appendChild(item);
+    }
+  }
 
-    if (suggestions.length === 0) {
-      document.getElementById('price-output').textContent = '';
+  // Ввод текста
+  document.getElementById('search-input').addEventListener('input', function() {
+    showSuggestions(this.value);
+  });
+
+  // При запуске страницы
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      await loadExcelFile();
+    } catch (e) {
+      alert('Ошибка загрузки файла Товары.xlsx');
+      console.error(e);
     }
   });
 </script>
