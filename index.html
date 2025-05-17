@@ -63,22 +63,29 @@
 <script>
   let products = [];
 
-  // Загружаем файл Товары.xlsx из корня сайта
   async function loadExcelFile() {
-    const response = await fetch('/Товары.xlsx');
-    const arrayBuffer = await response.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(sheet);
+    try {
+      const response = await fetch('/Товары.xlsx'); // замените на /products.xlsx если переименовали
+      if (!response.ok) throw new Error('Файл не найден');
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet);
+      
+      console.log('Считано из Excel:', jsonData);
 
-    // Сохраняем нужные данные
-    products = jsonData.map(row => ({
-      name: row['Наименование'],
-      price: row['Цена розница']
-    })).filter(p => p.name && p.price);
+      products = jsonData.map(row => ({
+        name: row['Наименование'],
+        price: row['Цена розница']
+      })).filter(p => p.name && p.price);
+
+      console.log('Отфильтрованные товары:', products);
+    } catch (e) {
+      alert('Ошибка загрузки Excel-файла: ' + e.message);
+      console.error(e);
+    }
   }
 
-  // Отображение подсказок
   function showSuggestions(value) {
     const suggestionsBox = document.getElementById('suggestions');
     const output = document.getElementById('price-output');
@@ -92,7 +99,7 @@
       p.name.toLowerCase().includes(searchValue)
     ).slice(0, 10);
 
-    for (const s of suggestions) {
+    suggestions.forEach(s => {
       const item = document.createElement('div');
       item.className = 'suggestion-item';
       item.textContent = `${s.name} — ${s.price}₸`;
@@ -102,22 +109,16 @@
         suggestionsBox.innerHTML = '';
       };
       suggestionsBox.appendChild(item);
-    }
+    });
   }
 
-  // Ввод текста
   document.getElementById('search-input').addEventListener('input', function() {
+    console.log('Ввод:', this.value);
     showSuggestions(this.value);
   });
 
-  // При запуске страницы
   window.addEventListener('DOMContentLoaded', async () => {
-    try {
-      await loadExcelFile();
-    } catch (e) {
-      alert('Ошибка загрузки файла Товары.xlsx');
-      console.error(e);
-    }
+    await loadExcelFile();
   });
 </script>
 
