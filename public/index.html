@@ -62,7 +62,7 @@
 
   async function loadExcelFile() {
     try {
-      const response = await fetch('/products.xlsx');
+      const response = await fetch('products.xlsx');
       if (!response.ok) throw new Error('Файл не найден');
       const arrayBuffer = await response.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
