@@ -7,29 +7,62 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body { font-family: sans-serif; margin: 0; padding: 15px; background: #f0f0f0; }
+    input { width: 100%; padding: 14px; font-size: 18px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+
+    #auth-screen { text-align: center; margin-top: 100px; }
+    #main-content { display: none; }
+
     h2 { text-align: center; margin-bottom: 15px; }
-    input { width: 100%; padding: 14px; font-size: 18px; border-radius: 8px; border: 1px solid #ccc; }
     #stats { margin-top: 10px; font-size: 14px; color: #555; text-align: center; }
     .suggestions { background: white; margin-top: 10px; border-radius: 8px; max-height: 300px; overflow-y: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .suggestion-item { padding: 12px 16px; border-bottom: 1px solid #eee; }
     .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:hover { background: #f8f8f8; cursor: pointer; }
     #price-output { margin-top: 20px; text-align: center; font-size: 18px; color: #333; }
+    button { padding: 12px 24px; font-size: 16px; margin-top: 10px; border: none; border-radius: 8px; background: #2c89ff; color: white; cursor: pointer; }
+    button:hover { background: #1f6fd1; }
   </style>
 </head>
 <body>
 
-<h2>Поиск цены товара</h2>
-<input type="text" id="search-input" placeholder="Введите название товара...">
-<div id="stats">
-  <span id="total-count">Загружено: 0</span> |
-  <span id="found-count">Найдено: 0</span>
+<!-- 🔐 PIN-код экран -->
+<div id="auth-screen">
+  <h2>Введите PIN-код для доступа</h2>
+  <input type="password" id="pin-input" placeholder="PIN-код">
+  <br><br>
+  <button onclick="checkPIN()">Войти</button>
+  <p id="pin-error" style="color: red; margin-top: 10px;"></p>
 </div>
-<div id="suggestions" class="suggestions"></div>
-<div id="price-output"></div>
 
+<!-- 🔍 Основной контент -->
+<div id="main-content">
+  <h2>Поиск цены товара</h2>
+  <input type="text" id="search-input" placeholder="Введите название товара...">
+  <div id="stats">
+    <span id="total-count">Загружено: 0</span> |
+    <span id="found-count">Найдено: 0</span>
+  </div>
+  <div id="suggestions" class="suggestions"></div>
+  <div id="price-output"></div>
+</div>
+
+<!-- 📜 JS -->
 <script>
   let products = [];
+
+  function checkPIN() {
+    const correctPIN = "230696";
+    const enteredPIN = document.getElementById('pin-input').value;
+    const errorBox = document.getElementById('pin-error');
+
+    if (enteredPIN === correctPIN) {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      loadExcelFile(); // Загружаем товары только после ввода PIN
+    } else {
+      errorBox.textContent = "Неверный PIN-код!";
+    }
+  }
 
   async function loadExcelFile() {
     try {
@@ -39,7 +72,7 @@
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-      // Пропускаем первые 6 строк, заголовки начинаются с 7-й
+      // ⚠️ В твоём файле таблица начинается с 7-й строки (index 6)
       const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 6, defval: '' });
 
       products = jsonData.map(row => ({
@@ -48,7 +81,7 @@
       })).filter(p => p.name && p.price);
 
       document.getElementById('total-count').textContent = `Загружено: ${products.length}`;
-      console.log("Загруженные товары:", products);
+      console.log("Загружено товаров:", products);
     } catch (e) {
       alert('Ошибка при загрузке Excel: ' + e.message);
       console.error(e);
@@ -84,12 +117,8 @@
     });
   }
 
-  document.getElementById('search-input').addEventListener('input', function () {
+  document.getElementById('search-input')?.addEventListener('input', function () {
     showSuggestions(this.value);
-  });
-
-  window.addEventListener('DOMContentLoaded', () => {
-    loadExcelFile();
   });
 </script>
 
