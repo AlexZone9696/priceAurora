@@ -38,25 +38,17 @@
       const arrayBuffer = await response.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-      // Попробуем определить правильные названия колонок
-      const firstRow = jsonData[0];
-      const nameKey = Object.keys(firstRow).find(k => k.toLowerCase().includes('наименование'));
-      const priceKey = Object.keys(firstRow).find(k => k.toLowerCase().includes('розница'));
-
-      if (!nameKey || !priceKey) {
-        alert("В файле не найдены колонки 'Наименование' и 'Цена розница'");
-        return;
-      }
+      // Пропускаем первые 6 строк, заголовки начинаются с 7-й
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 6, defval: '' });
 
       products = jsonData.map(row => ({
-        name: row[nameKey],
-        price: row[priceKey]
+        name: row['Наименование'],
+        price: row['Цена розница']
       })).filter(p => p.name && p.price);
 
       document.getElementById('total-count').textContent = `Загружено: ${products.length}`;
-      console.log(`Загружено ${products.length} товаров`);
+      console.log("Загруженные товары:", products);
     } catch (e) {
       alert('Ошибка при загрузке Excel: ' + e.message);
       console.error(e);
